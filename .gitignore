@@ -1,0 +1,29 @@
+# Environnements virtuels
+venv/
+env/
+*/venv/
+*/env/
+
+# Fichiers Python compilés
+__pycache__/
+*.pyc
+*.pyo
+
+# Variables d'environnement (mots de passe, secrets)
+.env
+*/.env
+
+# Fichiers de configuration IDE
+.vscode/
+.idea/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Bibliothèques compilées (pour le Service 5 bonus)
+*.so
+*.dll
+
+# Logs
+*.log
