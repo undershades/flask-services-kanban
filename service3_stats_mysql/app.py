@@ -30,5 +30,30 @@ def db_describe():
 # Exemple d'appel :
 # GET http://localhost:5003/db/stats/describe?serie=serie_A
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route('/db/stats/correlation', methods=['GET'])
+def db_correlation():
+    serie_x = request.args.get('serie_x')
+    serie_y = request.args.get('serie_y')
+    if not serie_x or not serie_y:
+        return jsonify({'erreur': 'Paramètres serie_x et serie_y requis'}), 400
+    try:
+        x = np.array(fetch_series(serie_x))
+        y = np.array(fetch_series(serie_y))
+        n = min(len(x), len(y))
+        x, y = x[:n], y[:n]  # Aligner les longueurs
+        r, p_value = stats.pearsonr(x, y)
+        return jsonify({
+            'source': 'mysql',
+            'series': {'x': serie_x, 'y': serie_y, 'n_points': n},
+            'resultat': {
+                'r': round(float(r), 4),
+                'p_value': round(float(p_value), 6),
+                'significatif': bool(p_value < 0.05)
+            }         })
+    except ValueError as e:
+        return jsonify({'erreur': str(e)}), 404
+    except Exception as e:
+        return jsonify({'erreur': 'Erreur base de données', 'detail': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5003)
