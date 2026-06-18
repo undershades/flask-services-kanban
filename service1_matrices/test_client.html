@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tests Service 1 - Matrices</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .success { background-color: #d4edda; border-color: #28a745; }
+        .error { background-color: #f8d7da; border-color: #dc3545; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Tests unitaires — Service 1 Matrices</h1>
+    <button onclick="lancerTousLesTests()">Lancer tous les tests</button>
+    <div id="resultats"></div>
+
+    <script>
+        const BASE = "http://127.0.0.1:5001";
+
+        async function tester(nom, url, body, check) {
+            const div = document.createElement("div");
+            div.className = "test";
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                const ok = check(res.status, data);
+                div.classList.add(ok ? "success" : "error");
+                div.innerHTML = `<b>${ok ? "✅" : "❌"} ${nom}</b><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch(e) {
+                div.classList.add("error");
+                div.innerHTML = `<b>❌ ${nom}</b><pre>Erreur: ${e.message}</pre>`;
+            }
+            document.getElementById("resultats").appendChild(div);
+        }
+
+        async function lancerTousLesTests() {
+            document.getElementById("resultats").innerHTML = "";
+
+            await tester("Addition 2x2", `${BASE}/matrices/add`,
+                {A: [[1,2],[3,4]], B: [[5,6],[7,8]]},
+                (s, d) => s === 200 && d.resultat[0][0] === 6.0
+            );
+
+            await tester("Multiplication 2x2", `${BASE}/matrices/multiply`,
+                {A: [[1,2],[3,4]], B: [[5,6],[7,8]]},
+                (s, d) => s === 200 && d.resultat[0][0] === 19.0
+            );
+
+            await tester("Transposition 2x3", `${BASE}/matrices/transpose`,
+                {A: [[1,2,3],[4,5,6]]},
+                (s, d) => s === 200 && d.resultat[0][1] === 4.0
+            );
+
+            await tester("Déterminant 2x2", `${BASE}/matrices/determinant`,
+                {A: [[1,2],[3,4]]},
+                (s, d) => s === 200 && d.resultat === -2.0
+            );
+
+            await tester("Inverse 2x2", `${BASE}/matrices/inverse`,
+                {A: [[1,2],[3,4]]},
+                (s, d) => s === 200 && d.operation === "inverse"
+            );
+
+            await tester("Erreur matrice singulière", `${BASE}/matrices/inverse`,
+                {A: [[1,2],[2,4]]},
+                (s, d) => s === 400 && d.erreur !== undefined
+            );
+        }
+    </script>
+</body>
+</html>
