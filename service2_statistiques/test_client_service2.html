@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Tests client — Service 2 Statistiques</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; }
+  .test { padding: 12px; margin-bottom: 10px; border-radius: 6px; }
+  .pass { background: #d4edda; color: #155724; }
+  .fail { background: #f8d7da; color: #721c24; }
+  button { padding: 10px 16px; font-size: 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>Tests client — Service 2 (Statistiques)</h1>
+<button onclick="lancerTests()">Lancer les tests</button>
+<div id="resultats"></div>
+
+<script>
+const BASE_URL = "http://localhost:5002";
+
+function afficherResultat(nom, succes, details) {
+  const div = document.createElement("div");
+  div.className = "test " + (succes ? "pass" : "fail");
+  div.textContent = (succes ? "✅ " : "❌ ") + nom + " — " + details;
+  document.getElementById("resultats").appendChild(div);
+}
+
+async function testDescribe() {
+  try {
+    const reponse = await fetch(BASE_URL + "/stats/describe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ valeurs: [10, 12, 14, 16, 18] })
+    });
+    const data = await reponse.json();
+    const succes = reponse.status === 200 && data.moyenne === 14.0;
+    afficherResultat("test_describe_succes", succes, "moyenne reçue = " + data.moyenne);
+  } catch (e) {
+    afficherResultat("test_describe_succes", false, "Erreur réseau : serveur non joignable");
+  }
+}
+
+async function testDescribeErreur() {
+  try {
+    const reponse = await fetch(BASE_URL + "/stats/describe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ valeurs: [] })
+    });
+    const succes = reponse.status === 400;
+    afficherResultat("test_describe_erreur_liste_vide", succes, "code reçu = " + reponse.status);
+  } catch (e) {
+    afficherResultat("test_describe_erreur_liste_vide", false, "Erreur réseau : serveur non joignable");
+  }
+}
+
+async function testCorrelation() {
+  try {
+    const reponse = await fetch(BASE_URL + "/stats/correlation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ x: [1, 2, 3, 4, 5], y: [2, 4, 6, 8, 10] })
+    });
+    const data = await reponse.json();
+    const succes = reponse.status === 200 && Math.abs(data.coefficient_pearson - 1.0) < 0.01;
+    afficherResultat("test_correlation_succes", succes, "r reçu = " + data.coefficient_pearson);
+  } catch (e) {
+    afficherResultat("test_correlation_succes", false, "Erreur réseau : serveur non joignable");
+  }
+}
+
+async function testCorrelationTaillesDifferentes() {
+  try {
+    const reponse = await fetch(BASE_URL + "/stats/correlation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ x: [1, 2, 3], y: [1, 2] })
+    });
+    const succes = reponse.status === 400;
+    afficherResultat("test_correlation_tailles_differentes", succes, "code reçu = " + reponse.status);
+  } catch (e) {
+    afficherResultat("test_correlation_tailles_differentes", false, "Erreur réseau : serveur non joignable");
+  }
+}
+
+async function testNormalite() {
+  try {
+    const reponse = await fetch(BASE_URL + "/stats/test_normalite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ valeurs: [12.5, 14.2, 13.8, 15.1, 11.9, 13.0, 14.5] })
+    });
+    const data = await reponse.json();
+    const succes = reponse.status === 200 && "p_value" in data && "statistique" in data;
+    afficherResultat("test_normalite_succes", succes, "p_value reçue = " + data.p_value);
+  } catch (e) {
+    afficherResultat("test_normalite_succes", false, "Erreur réseau : serveur non joignable");
+  }
+}
+
+async function testNormaliteErreur() {
+  try {
+    const reponse = await fetch(BASE_URL + "/stats/test_normalite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ valeurs: [1, 2] })
+    });
+    const succes = reponse.status === 400;
+    afficherResultat("test_normalite_erreur_trop_peu_valeurs", succes, "code reçu = " + reponse.status);
+  } catch (e) {
+    afficherResultat("test_normalite_erreur_trop_peu_valeurs", false, "Erreur réseau : serveur non joignable");
+  }
+}
+
+async function testStudent() {
+  try {
+    const reponse = await fetch(BASE_URL + "/stats/test_student", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupe1: [10, 12, 11, 13, 9], groupe2: [15, 16, 14, 17, 15] })
+    });
+    const data = await reponse.json();
+    const succes = reponse.status === 200 && "t_statistique" in data && "p_value" in data;
+    afficherResultat("test_student_succes", succes, "p_value reçue = " + data.p_value + " — " + data.interpretation);
+  } catch (e) {
+    afficherResultat("test_student_succes", false, "Erreur réseau : serveur non joignable");
+  }
+}
+
+async function testStudentErreur() {
+  try {
+    const reponse = await fetch(BASE_URL + "/stats/test_student", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupe1: [10], groupe2: [15, 16, 14] })
+    });
+    const succes = reponse.status === 400;
+    afficherResultat("test_student_erreur_groupe_trop_petit", succes, "code reçu = " + reponse.status);
+  } catch (e) {
+    afficherResultat("test_student_erreur_groupe_trop_petit", false, "Erreur réseau : serveur non joignable");
+  }
+}
+
+async function lancerTests() {
+  document.getElementById("resultats").innerHTML = "";
+  await testDescribe();
+  await testDescribeErreur();
+  await testCorrelation();
+  await testCorrelationTaillesDifferentes();
+  await testNormalite();
+  await testNormaliteErreur();
+  await testStudent();
+  await testStudentErreur();
+}
+</script>
+
+</body>
+</html>
