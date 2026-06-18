@@ -4,7 +4,7 @@ import io
 BASE_URL = "http://localhost:5004"
 
 def executer_tests():
-    print("=======")
+    print("")
     #  TEST 1 : Vérifier le cas où la clé 'file' est manquante
     print("[Test 1] Envoi d'une requête sans la clé 'file'...")
     reponse = requests.post(f"{BASE_URL}/upload/csv")

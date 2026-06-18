@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Service 4 - Upload CSV</title>
+</head>
+<body>
+    <h1>Test Service 4 — Upload CSV</h1>
+
+    <h2>Test POST /upload/csv</h2>
+    <input type="file" id="csvFile" accept=".csv">
+    <button onclick="uploadCSV()">Envoyer le CSV</button>
+    <pre id="resultatUpload"></pre>
+
+    <h2>Test GET /upload/series</h2>
+    <button onclick="getSeries()">Lister les séries</button>
+    <pre id="resultatSeries"></pre>
+
+    <script>
+        const BASE_URL = "http://127.0.0.1:5004";
+
+        async function uploadCSV() {
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) { alert('Choisir un fichier CSV !'); return; }
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch(`${BASE_URL}/upload/csv`, { method: 'POST', body: formData });
+            const data = await response.json();
+            document.getElementById('resultatUpload').textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function getSeries() {
+            const response = await fetch(`${BASE_URL}/upload/series`);
+            const data = await response.json();
+            document.getElementById('resultatSeries').textContent = JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html>
