@@ -1,1 +1,23 @@
-# TODO
+nom_serie;valeur;categorie;date_mesure
+serie_A;12.50;temperature;15/01/2024
+serie_A;15.30;temperature;16/01/2024
+serie_A;8.70;temperature;17/01/2024
+serie_A;21.00;temperature;18/01/2024
+serie_A;13.20;temperature;19/01/2024
+serie_A;9.80;temperature;20/01/2024
+serie_A;17.60;temperature;21/01/2024
+serie_A;11.40;temperature;22/01/2024
+serie_B;45.10;pression;15/01/2024
+serie_B;52.80;pression;16/01/2024
+serie_B;48.60;pression;17/01/2024
+serie_B;55.20;pression;18/01/2024
+serie_B;50.90;pression;19/01/2024
+serie_B;47.30;pression;20/01/2024
+serie_B;53.70;pression;21/01/2024
+serie_B;49.80;pression;22/01/2024
+serie_C;220.5;debit;15/01/2024
+serie_C;235.8;debit;16/01/2024
+serie_C;198.2;debit;17/01/2024
+serie_C;245.1;debit;18/01/2024
+serie_C;210.9;debit;19/01/2024
+serie_C;228.4;debit;20/01/2024
