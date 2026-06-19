@@ -22,22 +22,22 @@ const BASE_URL = "http://localhost:5002";
 
 function afficherResultat(nom, succes, details) {
   const div = document.createElement("div");
-  div.className = "test " + (succes ? "pass" : "fail");
+  div.className = "test " + (succes ? "pass" : "fail");  // opérateur ternaire : condition ? si_vrai : si_faux
   div.textContent = (succes ? "✅ " : "❌ ") + nom + " — " + details;
-  document.getElementById("resultats").appendChild(div);
+  document.getElementById("resultats").appendChild(div);  // ajoute le bloc dans la page
 }
 
-async function testDescribe() {
+async function testDescribe() {  // async = nécessaire pour pouvoir utiliser await dans la fonction
   try {
-    const reponse = await fetch(BASE_URL + "/stats/describe", {
+    const reponse = await fetch(BASE_URL + "/stats/describe", {  // fetch envoie une requête HTTP, await attend la réponse
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ valeurs: [10, 12, 14, 16, 18] })
+      headers: { "Content-Type": "application/json" },  // indique au serveur qu'on envoie du JSON
+      body: JSON.stringify({ valeurs: [10, 12, 14, 16, 18] })  // JSON.stringify convertit l'objet JS en texte JSON
     });
-    const data = await reponse.json();
+    const data = await reponse.json();  // .json() convertit la réponse en objet JavaScript utilisable
     const succes = reponse.status === 200 && data.moyenne === 14.0;
     afficherResultat("test_describe_succes", succes, "moyenne reçue = " + data.moyenne);
-  } catch (e) {
+  } catch (e) {  // catch intercepte si fetch échoue (serveur pas lancé)
     afficherResultat("test_describe_succes", false, "Erreur réseau : serveur non joignable");
   }
 }
@@ -47,7 +47,7 @@ async function testDescribeErreur() {
     const reponse = await fetch(BASE_URL + "/stats/describe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ valeurs: [] })
+      body: JSON.stringify({ valeurs: [] })  // liste vide → 400 attendu
     });
     const succes = reponse.status === 400;
     afficherResultat("test_describe_erreur_liste_vide", succes, "code reçu = " + reponse.status);
@@ -64,7 +64,7 @@ async function testCorrelation() {
       body: JSON.stringify({ x: [1, 2, 3, 4, 5], y: [2, 4, 6, 8, 10] })
     });
     const data = await reponse.json();
-    const succes = reponse.status === 200 && Math.abs(data.coefficient_pearson - 1.0) < 0.01;
+    const succes = reponse.status === 200 && Math.abs(data.coefficient_pearson - 1.0) < 0.01;  // Math.abs car les flottants sont imprécis, on compare avec une tolérance
     afficherResultat("test_correlation_succes", succes, "r reçu = " + data.coefficient_pearson);
   } catch (e) {
     afficherResultat("test_correlation_succes", false, "Erreur réseau : serveur non joignable");
@@ -76,7 +76,7 @@ async function testCorrelationTaillesDifferentes() {
     const reponse = await fetch(BASE_URL + "/stats/correlation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ x: [1, 2, 3], y: [1, 2] })
+      body: JSON.stringify({ x: [1, 2, 3], y: [1, 2] })  // tailles différentes → 400 attendu
     });
     const succes = reponse.status === 400;
     afficherResultat("test_correlation_tailles_differentes", succes, "code reçu = " + reponse.status);
@@ -93,7 +93,7 @@ async function testNormalite() {
       body: JSON.stringify({ valeurs: [12.5, 14.2, 13.8, 15.1, 11.9, 13.0, 14.5] })
     });
     const data = await reponse.json();
-    const succes = reponse.status === 200 && "p_value" in data && "statistique" in data;
+    const succes = reponse.status === 200 && "p_value" in data && "statistique" in data;  // "clé" in data vérifie qu'une clé existe dans l'objet
     afficherResultat("test_normalite_succes", succes, "p_value reçue = " + data.p_value);
   } catch (e) {
     afficherResultat("test_normalite_succes", false, "Erreur réseau : serveur non joignable");
@@ -105,7 +105,7 @@ async function testNormaliteErreur() {
     const reponse = await fetch(BASE_URL + "/stats/test_normalite", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ valeurs: [1, 2] })
+      body: JSON.stringify({ valeurs: [1, 2] })  // moins de 3 valeurs → 400 attendu
     });
     const succes = reponse.status === 400;
     afficherResultat("test_normalite_erreur_trop_peu_valeurs", succes, "code reçu = " + reponse.status);
@@ -134,7 +134,7 @@ async function testStudentErreur() {
     const reponse = await fetch(BASE_URL + "/stats/test_student", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groupe1: [10], groupe2: [15, 16, 14] })
+      body: JSON.stringify({ groupe1: [10], groupe2: [15, 16, 14] })  // groupe1 a 1 seule valeur → 400 attendu
     });
     const succes = reponse.status === 400;
     afficherResultat("test_student_erreur_groupe_trop_petit", succes, "code reçu = " + reponse.status);
@@ -144,8 +144,8 @@ async function testStudentErreur() {
 }
 
 async function lancerTests() {
-  document.getElementById("resultats").innerHTML = "";
-  await testDescribe();
+  document.getElementById("resultats").innerHTML = "";  // vide les résultats précédents
+  await testDescribe();           // await = attend la fin de chaque test avant de passer au suivant
   await testDescribeErreur();
   await testCorrelation();
   await testCorrelationTaillesDifferentes();

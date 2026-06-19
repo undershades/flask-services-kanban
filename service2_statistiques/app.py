@@ -1,78 +1,77 @@
-# Flask : framework web, request = données reçues, jsonify = convertit dict → JSON
+#Route 1 — POST /stats/describe : elle résume une liste de nombres.
+#Route 2 — POST /stats/correlation : elle mesure si deux séries de nombres évoluent ensemble ou en sens inverse.
+#Route 3 — POST /stats/test_normalite : elle vérifie si tes données suivent une courbe en cloche (loi normale).
+#Route 4 — POST /stats/test_student : elle compare les moyennes de deux groupes pour savoir si leur différence 
+#est réelle ou due au hasard.
+
 from flask import Flask, request, jsonify, send_from_directory
-import os                          # pour récupérer le chemin du dossier courant
-import numpy as np                 # calculs numériques (tableaux, stats)
-from scipy import stats as scipy_stats  # tests statistiques (Pearson, Shapiro, Student)
+import os
+import numpy as np
+from scipy import stats as scipy_stats  # alias pour éviter d'écrire scipy.stats à chaque fois
 
-app = Flask(__name__)              # crée l'application Flask (__name__ = nom du fichier)
-app.config['JSON_AS_ASCII'] = False  # envoie les accents directement (é au lieu de é)
+app = Flask(__name__)               # __name__ = nom du fichier, Flask en a besoin pour se repérer
+app.config['JSON_AS_ASCII'] = False  # envoie les accents directement (é) au lieu du code Unicode
 
 
-def parse_serie(data, key="valeurs"):
+def parse_serie(data, key="valeurs"):  # key="valeurs" = valeur par défaut, changeable selon la route
     """Récupère et valide une série de valeurs numériques depuis le JSON reçu."""
-    if data is None or key not in data:               # JSON absent ou champ manquant
-        raise ValueError(f"Le champ '{key}' est manquant dans la requête JSON")
+    if data is None or key not in data:
+        raise ValueError(f"Le champ '{key}' est manquant dans la requête JSON")  # raise = déclenche une erreur volontairement
 
     valeurs = data[key]
 
-    if not isinstance(valeurs, list) or len(valeurs) == 0:  # doit être une liste non vide
+    if not isinstance(valeurs, list) or len(valeurs) == 0:  # isinstance vérifie que c'est bien une liste
         raise ValueError(f"Le champ '{key}' doit être une liste non vide")
 
     try:
-        array = np.array(valeurs, dtype=float)  # convertit en tableau NumPy de flottants
-    except (ValueError, TypeError):             # si la liste contient du texte ou None
+        array = np.array(valeurs, dtype=float)  # dtype=float force la conversion en nombres décimaux
+    except (ValueError, TypeError):
         raise ValueError(f"Le champ '{key}' doit contenir uniquement des nombres")
 
     return array
-    # le paramètre key permet de réutiliser cette fonction pour "valeurs", "x", "y", "groupe1"...
 
 
-# @app.route = décorateur : lie l'URL /stats/describe à la fonction describe()
-# methods=["POST"] : seule la méthode POST est acceptée, Flask renvoie une erreur sur GET automatiquement
-@app.route("/stats/describe", methods=["POST"])
+@app.route("/stats/describe", methods=["POST"])  # décorateur : lie l'URL /stats/describe à cette fonction
 def describe():
-    data = request.get_json()  # extrait le corps de la requête et le transforme en dictionnaire Python
+    data = request.get_json()  # lit le JSON envoyé par le client, le convertit en dictionnaire Python
     try:
-        valeurs = parse_serie(data, "valeurs")  # valide les données, lève ValueError si invalide
+        valeurs = parse_serie(data, "valeurs")
 
         resultat = {
-            "n": int(valeurs.size),  # .size = nb d'éléments NumPy. int() car NumPy renvoie des types pas JSON-sérialisables
-            "moyenne": round(float(np.mean(valeurs)), 4),    # float() pour convertir en type Python standard, round() pour 4 décimales
-            "mediane": round(float(np.median(valeurs)), 4),  # valeur du milieu une fois les données triées
+            "n": int(valeurs.size),                              # int() car les types NumPy ne sont pas JSON-sérialisables
+            "moyenne": round(float(np.mean(valeurs)), 4),        # float() même raison, round() pour 4 décimales
+            "mediane": round(float(np.median(valeurs)), 4),
             "ecart_type": round(float(np.std(valeurs, ddof=1)), 4),  # ddof=1 = écart-type échantillon (÷ n-1, pas n)
-            "variance": round(float(np.var(valeurs, ddof=1)), 4),    # variance = écart-type², même logique ddof=1
+            "variance": round(float(np.var(valeurs, ddof=1)), 4),
             "min": round(float(np.min(valeurs)), 4),
             "max": round(float(np.max(valeurs)), 4),
-            "q1": round(float(np.percentile(valeurs, 25)), 4),  # 25% des valeurs sont en dessous
-            "q3": round(float(np.percentile(valeurs, 75)), 4),  # 75% des valeurs sont en dessous
+            "q1": round(float(np.percentile(valeurs, 25)), 4),
+            "q3": round(float(np.percentile(valeurs, 75)), 4),
         }
-        return jsonify(resultat), 200  # jsonify convertit le dict en JSON, 200 = succès
+        return jsonify(resultat), 200  # 200 = succès
 
-    except ValueError as e:       # erreur levée par parse_serie, faute du client
-        return jsonify({"erreur": str(e)}), 400   # 400 = Bad Request
-    except Exception as e:        # filet de sécurité pour toute erreur imprévue (ne pas planter le serveur)
-        return jsonify({"erreur": f"Erreur interne : {str(e)}"}), 500  # 500 = erreur côté serveur
+    except ValueError as e:
+        return jsonify({"erreur": str(e)}), 400  # 400 = Bad Request (faute du client)
+    except Exception as e:
+        return jsonify({"erreur": f"Erreur interne : {str(e)}"}), 500  # 500 = erreur serveur
 
 
 @app.route("/stats/correlation", methods=["POST"])
 def correlation():
     data = request.get_json()
     try:
-        x = parse_serie(data, "x")  # parse_serie appelée deux fois avec des clés différentes
-        y = parse_serie(data, "y")  # c'est pour ça que le paramètre key existe dans parse_serie
+        x = parse_serie(data, "x")  # parse_serie réutilisée avec des clés différentes selon le champ JSON
+        y = parse_serie(data, "y")
 
-        if x.size != y.size:  # chaque point x doit avoir un point y correspondant
+        if x.size != y.size:
             return jsonify({"erreur": "Les séries x et y doivent avoir la même taille"}), 400
 
-        if x.size < 2:  # une corrélation n'a pas de sens avec moins de 2 points
+        if x.size < 2:
             return jsonify({"erreur": "Au moins 2 valeurs sont nécessaires par série"}), 400
 
-        # pearsonr renvoie 2 valeurs → tuple unpacking : on les récupère en une seule ligne
-        # r entre -1 et 1 (force du lien), p_value (fiabilité statistique du résultat)
-        r, p_value = scipy_stats.pearsonr(x, y)
+        r, p_value = scipy_stats.pearsonr(x, y)  # tuple unpacking : pearsonr renvoie 2 valeurs récupérées en une ligne
 
         abs_r = abs(r)  # valeur absolue : -0.9 est aussi fort que +0.9, juste sens inverse
-        # if/elif/else : cascade testée dans l'ordre, dès qu'une condition est vraie Python ignore le reste
         if abs_r >= 0.7:
             interpretation = "Corrélation forte"
         elif abs_r >= 0.4:
@@ -84,7 +83,7 @@ def correlation():
 
         resultat = {
             "coefficient_pearson": round(float(r), 4),
-            "p_value": round(float(p_value), 6),  # 6 décimales car les p_values sont souvent très petites
+            "p_value": round(float(p_value), 6),  # 6 décimales car les p_values peuvent être très petites
             "interpretation": interpretation,
             "n": int(x.size),
         }
@@ -102,14 +101,13 @@ def test_normalite():
     try:
         valeurs = parse_serie(data, "valeurs")
 
-        if valeurs.size < 3:  # Shapiro-Wilk n'est pas mathématiquement valide en dessous de 3 valeurs
+        if valeurs.size < 3:  # Shapiro-Wilk exige au moins 3 valeurs pour être valide
             return jsonify({"erreur": "Au moins 3 valeurs sont nécessaires pour ce test"}), 400
 
-        # shapiro renvoie 2 valeurs → tuple unpacking (même principe que pearsonr)
-        statistique, p_value = scipy_stats.shapiro(valeurs)
+        statistique, p_value = scipy_stats.shapiro(valeurs)  # tuple unpacking, même principe que pearsonr
 
-        # 0.05 = seuil de signification (alpha), convention scientifique universelle
-        # p > 0.05 : pas assez de preuves pour rejeter l'hypothèse de normalité
+        # seuil 0.05 = convention statistique universelle (alpha)
+        # p > 0.05 : pas assez de preuves pour rejeter la normalité
         if p_value > 0.05:
             interpretation = "La série suit probablement une loi normale (p > 0.05)"
         else:
@@ -134,16 +132,14 @@ def test_student():
     data = request.get_json()
     try:
         groupe1 = parse_serie(data, "groupe1")
-        groupe2 = parse_serie(data, "groupe2")
+        groupe2 = parse_serie(data, "groupe2")  # les deux groupes peuvent avoir des tailles différentes
 
-        # les deux groupes n'ont pas besoin d'avoir la même taille (contrairement à pearsonr)
-        if groupe1.size < 2 or groupe2.size < 2:  # 2 valeurs minimum pour calculer une variance
+        if groupe1.size < 2 or groupe2.size < 2:
             return jsonify({"erreur": "Chaque groupe doit contenir au moins 2 valeurs"}), 400
 
-        # ttest_ind = t-test pour groupes indépendants → tuple unpacking
-        t_statistique, p_value = scipy_stats.ttest_ind(groupe1, groupe2)
+        t_statistique, p_value = scipy_stats.ttest_ind(groupe1, groupe2)  # ttest_ind = t-test pour groupes indépendants
 
-        # attention sens inverse du test de normalité : ici p < 0.05 = différence significative
+        # attention : sens inverse du test de normalité, ici p < 0.05 = différence significative
         if p_value < 0.05:
             interpretation = "Différence significative entre les deux groupes (p < 0.05)"
         else:
@@ -153,8 +149,8 @@ def test_student():
             "t_statistique": round(float(t_statistique), 4),
             "p_value": round(float(p_value), 6),
             "interpretation": interpretation,
-            "moyenne_groupe1": round(float(np.mean(groupe1)), 4),  # ajoutées pour voir concrètement
-            "moyenne_groupe2": round(float(np.mean(groupe2)), 4),  # la différence entre les deux groupes
+            "moyenne_groupe1": round(float(np.mean(groupe1)), 4),
+            "moyenne_groupe2": round(float(np.mean(groupe2)), 4),
         }
         return jsonify(resultat), 200
 
@@ -179,11 +175,16 @@ def home():
 
 @app.route("/test", methods=["GET"])
 def test_client():
-    dossier = os.path.dirname(os.path.abspath(__file__))  # dossier du fichier app.py
+    dossier = os.path.dirname(os.path.abspath(__file__))  # chemin absolu du dossier contenant app.py
     return send_from_directory(dossier, "test_client_service2.html")
 
 
-# ce bloc ne s'exécute que si on lance directement "python app.py"
-if __name__ == "__main__":
+if __name__ == "__main__":  # s'exécute seulement si on lance directement "python app.py"
     print("Page de test : http://localhost:5002/test")
-    app.run(host="0.0.0.0", port=5002, debug=True)  # 0.0.0.0 = accessible sur tout le réseau
+    app.run(host="0.0.0.0", port=5002, debug=True)  # 0.0.0.0 = accessible sur tout le réseau local
+
+
+#Route 1 : curl -X POST http://localhost:5002/stats/describe -H "Content-Type: application/json" -d "{\"valeurs\": [10, 12, 14, 16, 18]}"
+#Route 2 : curl -X POST http://localhost:5002/stats/correlation -H "Content-Type: application/json" -d "{\"x\": [1,2,3,4,5], \"y\": [2,4,6,8,10]}"
+#Route 3 : curl -X POST http://localhost:5002/stats/test_normalite -H "Content-Type: application/json" -d "{\"valeurs\": [12.5, 14.2, 13.8, 15.1, 11.9, 13.0, 14.5]}"
+#Route 4 : curl -X POST http://localhost:5002/stats/test_student -H "Content-Type: application/json" -d "{\"groupe1\": [10,12,11,13,9], \"groupe2\": [15,16,14,17,15]}"
