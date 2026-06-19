@@ -4,70 +4,105 @@
     <meta charset="UTF-8">
     <title>Tests Service 1 - Matrices</title>
     <style>
+        /* Style général de la page */
         body { font-family: Arial, sans-serif; margin: 40px; }
+        /* Style de chaque bloc de test */
         .test { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        /* Fond vert si le test réussit */
         .success { background-color: #d4edda; border-color: #28a745; }
+        /* Fond rouge si le test échoue */
         .error { background-color: #f8d7da; border-color: #dc3545; }
         button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        /* Style du bloc qui affiche la réponse JSON */
         pre { background: #f4f4f4; padding: 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
     <h1>Tests unitaires — Service 1 Matrices</h1>
+    <!-- Bouton qui déclenche tous les tests au clic -->
     <button onclick="lancerTousLesTests()">Lancer tous les tests</button>
+    <!-- Zone où les résultats des tests seront affichés -->
     <div id="resultats"></div>
 
     <script>
+        /* Adresse du serveur Flask */
         const BASE = "http://127.0.0.1:5001";
 
+        /* Fonction générique qui exécute un test
+           - nom   : nom du test affiché à l'écran
+           - url   : route Flask à appeler
+           - body  : matrices à envoyer en JSON
+           - check : fonction qui vérifie si la réponse est correcte */
         async function tester(nom, url, body, check) {
+            /* Crée un bloc HTML pour afficher le résultat */
             const div = document.createElement("div");
             div.className = "test";
             try {
+                /* Envoie la requête POST au serveur Flask avec les matrices */
                 const res = await fetch(url, {
                     method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify(body)
+                    headers: {"Content-Type": "application/json"}, // on envoie du JSON
+                    body: JSON.stringify(body) // convertit l'objet JS en texte JSON
                 });
+                /* Convertit la réponse JSON en objet JavaScript */
                 const data = await res.json();
+                /* Vérifie si le résultat est correct grâce à la fonction check */
                 const ok = check(res.status, data);
+                /* Ajoute la classe "success" (vert) ou "error" (rouge) selon le résultat */
                 div.classList.add(ok ? "success" : "error");
+                /* Affiche ✅ ou ❌ avec le nom du test et la réponse JSON */
                 div.innerHTML = `<b>${ok ? "✅" : "❌"} ${nom}</b><pre>${JSON.stringify(data, null, 2)}</pre>`;
             } catch(e) {
+                /* Si le serveur est inaccessible ou une erreur réseau survient */
                 div.classList.add("error");
                 div.innerHTML = `<b>❌ ${nom}</b><pre>Erreur: ${e.message}</pre>`;
             }
+            /* Ajoute le bloc de résultat dans la page */
             document.getElementById("resultats").appendChild(div);
         }
 
+        /* Fonction qui lance tous les tests dans l'ordre */
         async function lancerTousLesTests() {
+            /* Vide les résultats précédents */
             document.getElementById("resultats").innerHTML = "";
 
+            /* Test 1 : Addition de [[1,2],[3,4]] + [[5,6],[7,8]]
+               On vérifie que le code est 200 et que le premier résultat est 6.0 */
             await tester("Addition 2x2", `${BASE}/matrices/add`,
                 {A: [[1,2],[3,4]], B: [[5,6],[7,8]]},
                 (s, d) => s === 200 && d.resultat[0][0] === 6.0
             );
 
+            /* Test 2 : Multiplication de [[1,2],[3,4]] x [[5,6],[7,8]]
+               On vérifie que le code est 200 et que le premier résultat est 19.0 */
             await tester("Multiplication 2x2", `${BASE}/matrices/multiply`,
                 {A: [[1,2],[3,4]], B: [[5,6],[7,8]]},
                 (s, d) => s === 200 && d.resultat[0][0] === 19.0
             );
 
+            /* Test 3 : Transposition de [[1,2,3],[4,5,6]]
+               On vérifie que le code est 200 et que la case [0][1] vaut 4.0 (ancienne ligne 2) */
             await tester("Transposition 2x3", `${BASE}/matrices/transpose`,
                 {A: [[1,2,3],[4,5,6]]},
                 (s, d) => s === 200 && d.resultat[0][1] === 4.0
             );
 
+            /* Test 4 : Déterminant de [[1,2],[3,4]]
+               On vérifie que le code est 200 et que le déterminant vaut -2.0 */
             await tester("Déterminant 2x2", `${BASE}/matrices/determinant`,
                 {A: [[1,2],[3,4]]},
                 (s, d) => s === 200 && d.resultat === -2.0
             );
 
+            /* Test 5 : Inverse de [[1,2],[3,4]]
+               On vérifie que le code est 200 et que l'opération retournée est bien "inverse" */
             await tester("Inverse 2x2", `${BASE}/matrices/inverse`,
                 {A: [[1,2],[3,4]]},
                 (s, d) => s === 200 && d.operation === "inverse"
             );
 
+            /* Test 6 : Matrice singulière [[1,2],[2,4]] (déterminant = 0)
+               On vérifie que le code est 400 (erreur) et qu'un message d'erreur est présent */
             await tester("Erreur matrice singulière", `${BASE}/matrices/inverse`,
                 {A: [[1,2],[2,4]]},
                 (s, d) => s === 400 && d.erreur !== undefined
