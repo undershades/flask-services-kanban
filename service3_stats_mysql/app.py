@@ -3,9 +3,11 @@ import numpy as np
 from scipy import stats 
 from db import fetch_series
 from config import Config
+from Controller import bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
+app.register_blueprint(bp)
 
 @app.route('/db/stats/describe', methods=['GET']) 
 def db_describe():
