@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify
-import pandas as pd  
-import mysql.connector
-from flask_cors import CORS
+from flask import Flask, request, jsonify # import flask pour créer l'api, le request pour lire ce qu'on recoit, jsonify pour renvoyer du json
+import pandas as pd  #Permet de lire le csv et manipuler  le fichier CSV
+import mysql.connector 
+from flask_cors import CORS # Autorise le navigateur  à appeler l'api.
 from dotenv import load_dotenv
 import os
 import io
