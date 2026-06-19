@@ -7,21 +7,26 @@
 <body>
     <h1>Test Service 4 — Upload CSV</h1>
 
+     # Formulaire d'envoi CSV 
     <h2>Test POST /upload/csv</h2>
     <input type="file" id="csvFile" accept=".csv">
     <button onclick="uploadCSV()">Envoyer le CSV</button>
     <pre id="resultatUpload"></pre>
 
+    # Listing des séries en base
     <h2>Test GET /upload/series</h2>
     <button onclick="getSeries()">Lister les séries</button>
     <pre id="resultatSeries"></pre>
 
     <script>
+        // Adresse du Service 4
         const BASE_URL = "http://127.0.0.1:5004";
 
         async function uploadCSV() {
             const file = document.getElementById('csvFile').files[0];
             if (!file) { alert('Choisir un fichier CSV !'); return; }
+
+             // Envoi du fichier via FormData 
             const formData = new FormData();
             formData.append('file', file);
             const response = await fetch(`${BASE_URL}/upload/csv`, { method: 'POST', body: formData });
@@ -30,6 +35,7 @@
         }
 
         async function getSeries() {
+            // Récupère toutes les séries présentes dans la table MySQL
             const response = await fetch(`${BASE_URL}/upload/series`);
             const data = await response.json();
             document.getElementById('resultatSeries').textContent = JSON.stringify(data, null, 2);

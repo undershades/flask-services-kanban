@@ -1,7 +1,7 @@
 import requests
 import io
 
-BASE_URL = "http://localhost:5004"
+BASE_URL = "http://localhost:5004"  # Adresse du Service 4
 
 def executer_tests():
     print("")
